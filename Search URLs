@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+import urllib.parse
+
+def main():
+    # 🎀 Gets the query, file path, and emoji set.
+    query = sys.argv[1] if len(sys.argv) > 1 else ""
+    file_path = os.path.expanduser(os.environ.get('filepath'))
+    emojis = '✉️🩶📎'
+
+    # 🎀 Builds Alfred's script filter JSON.
+    items = []
+
+    if not query:
+        # 🎀 If there's no query, offers a single "Open" option.
+        url = f"https://google.com/"
+        items = [{
+            "uid": url,
+            "title": "✦ Open Google ✦",
+            "subtitle": "↩︎ open in browser",
+            "arg": url,
+            "valid": True,
+            "mods": {
+                            "cmd": {
+                                "valid": True,
+                                "arg": url,
+                                "subtitle": "⌘↩︎ copy to clipboard",
+                            }}
+        }]
+    else:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                for line in file:
+                    line = line.strip()
+                    # 🎀 Skips empty lines.
+                    if not line:
+                        continue
+
+                    # 🎀 Only considers lines that start with one of the configured emojis.
+                    if not any(line.startswith(e) for e in emojis):
+                        continue
+
+                    # 🎀 Filters lines for the query (case insensitive).
+                    if query.lower() not in line.lower():
+                        continue
+
+                    # 🎀 Make sure lines are properly formatted.
+                    parts = line.split(":", 1)
+                    if len(parts) < 2:
+                        continue
+
+                    # 🎀 Extracts the title and the URL, and strips extra whitespaces.
+                    title = parts[0].strip()
+                    url = parts[1].strip()
+
+                    # 🎀 Builds Alfred's script filter JSON.
+                    items.append({
+                        "uid": url,
+                        "title": title,
+                        "subtitle": "↩︎ open in browser",
+                        "arg": url,
+                        "valid": True,
+                        "mods": {
+                                        "cmd": {
+                                            "valid": True,
+                                            "arg": url,
+                                            "subtitle": "⌘↩︎ copy to clipboard",
+                                        }}
+                    })
+        except Exception as e:
+            # 🎀 Error handling.
+            items = [{
+                "title": "Error reading file",
+                "subtitle": str(e),
+                "valid": False
+            }]
+
+    # 🎀 If there's a query but no matches, offers a single "Search" option.
+    if query and not items:
+        encoded = urllib.parse.quote(query, safe='')
+        url = f"https://google.com/search?q={encoded}"
+        items = [{
+            "uid": url,
+            "title": f"✦ Search for {query} ✦",
+            "subtitle": "↩︎ open in browser",
+            "arg": url,
+            "valid": True,
+            "mods": {
+                            "cmd": {
+                                "valid": True,
+                                "arg": url,
+                                "subtitle": "⌘↩︎ copy to clipboard",
+                            }}
+        }]
+
+    output = {"items": items}
+    print(json.dumps(output))
+
+if __name__ == '__main__':
+    main()
